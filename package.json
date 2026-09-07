@@ -1,0 +1,21 @@
+{
+  "name": "upstart-interns-explore-india",
+  "version": "1.0.0",
+  "description": "Explore India Travel Guide API and Web Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "express",
+    "rest-api",
+    "upstart-interns"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Explore India | Travel Guide</title>
+    <title>Explore India | Travel Guide & REST API</title>
 
     <style>
         * {
@@ -20,7 +19,7 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #222;
             background: #f7f7f7;
@@ -35,6 +34,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         nav {
@@ -59,12 +59,14 @@
             display: flex;
             list-style: none;
             gap: 28px;
+            align-items: center;
         }
 
         .nav-links a {
             text-decoration: none;
             color: #333;
             font-weight: 600;
+            transition: color 0.2s;
         }
 
         .nav-links a:hover {
@@ -104,14 +106,53 @@
             display: inline-block;
             background: #d35400;
             color: white;
-            padding: 12px 22px;
+            padding: 10px 20px;
             border-radius: 6px;
             text-decoration: none;
             font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-size: 0.9rem;
         }
 
         .btn:hover {
             background: #a84300;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #d35400;
+            color: #d35400;
+        }
+
+        .btn-outline:hover {
+            background: #d35400;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn-warning:hover {
+            background: #d35400;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
         }
 
         .hero-image img {
@@ -120,6 +161,39 @@
             height: auto;
             display: block;
             border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ================= SEARCH & CONTROLS ================= */
+
+        .controls-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex-grow: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: #d35400;
+            box-shadow: 0 0 0 3px rgba(211, 84, 0, 0.15);
         }
 
         /* ================= DESTINATIONS ================= */
@@ -134,14 +208,18 @@
             margin: auto;
         }
 
-        .section-heading {
-            text-align: center;
-            margin-bottom: 40px;
+        .section-heading-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 20px;
         }
 
         .section-heading h2 {
             font-size: 2.2rem;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .section-heading p {
@@ -159,6 +237,16 @@
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid #e5e5e5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         }
 
         .card img {
@@ -170,6 +258,18 @@
 
         .card-content {
             padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-tagline {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #d35400;
+            font-weight: 700;
+            margin-bottom: 4px;
         }
 
         .card-content h3 {
@@ -180,6 +280,157 @@
         .card-content p {
             color: #666;
             font-size: 0.95rem;
+            flex-grow: 1;
+            margin-bottom: 15px;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+            gap: 8px;
+        }
+
+        .card-btn-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .card-id-badge {
+            font-size: 0.75rem;
+            background: #eee;
+            color: #555;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-family: monospace;
+        }
+
+        /* ================= MODALS ================= */
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            background: white;
+            width: min(500px, 90%);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+            color: #222;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #d35400;
+            box-shadow: 0 0 0 3px rgba(211, 84, 0, 0.15);
+        }
+
+        /* ================= TOAST NOTIFICATIONS ================= */
+
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s forwards;
+        }
+
+        .toast.success {
+            background: #27ae60;
+        }
+
+        .toast.error {
+            background: #c0392b;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         /* ================= ABOUT ================= */
@@ -217,10 +468,9 @@
             color: #ccc;
         }
 
-        /* ================= TABLET ================= */
+        /* ================= RESPONSIVE ================= */
 
         @media (max-width: 800px) {
-
             .hero {
                 grid-template-columns: 1fr;
                 gap: 30px;
@@ -241,90 +491,27 @@
             }
         }
 
-        /* ================= MOBILE ================= */
-
         @media (max-width: 600px) {
-
-            nav {
-                min-height: 60px;
-            }
-
-            .nav-links {
-                gap: 12px;
-            }
-
-            .nav-links a {
-                font-size: 0.85rem;
-            }
-
-            .hero {
-                margin: 30px auto;
-            }
-
-            .hero-content h1 {
-                font-size: 2.4rem;
-            }
-
-            .hero-content p {
-                font-size: 1rem;
-            }
-
             .cards {
                 grid-template-columns: 1fr;
             }
 
-            .destinations,
-            .about {
-                padding: 50px 0;
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
             }
 
-            .section-heading h2,
-            .about-content h2 {
-                font-size: 1.8rem;
-            }
-
-            .card img {
-                height: 200px;
-            }
-        }
-
-        /* ================= SMALL PHONES ================= */
-
-        @media (max-width: 375px) {
-
-            nav {
-                width: 90%;
-            }
-
-            .logo {
-                font-size: 1.2rem;
-            }
-
-            .nav-links {
-                gap: 10px;
-            }
-
-            .nav-links a {
-                font-size: 0.75rem;
-            }
-
-            .hero-content h1 {
-                font-size: 2.1rem;
-            }
-
-            .hero-content p {
-                font-size: 0.95rem;
-            }
-
-            .section-container,
-            .hero {
-                width: 90%;
+            .search-box {
+                max-width: 100%;
             }
         }
     </style>
 </head>
 
 <body>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
 
     <!-- Navigation -->
     <header>
@@ -338,7 +525,6 @@
             </ul>
         </nav>
     </header>
-
 
     <!-- Hero Section -->
     <main id="home">
@@ -364,75 +550,35 @@
 
         </section>
 
-
         <!-- Destinations -->
         <section class="destinations" id="places">
 
             <div class="section-container">
 
-                <div class="section-heading">
-                    <h2>Popular Destinations</h2>
-                    <p>Three places that showcase India's diversity.</p>
+                <div class="section-heading-container">
+                    <div class="section-heading">
+                        <h2>Popular Destinations</h2>
+                    </div>
+                    <button class="btn btn-outline" id="open-add-modal-btn">+ Add Destination</button>
                 </div>
 
-                <div class="cards">
+                <div class="controls-bar">
+                    <div class="search-box">
+                        <input type="text" id="search-input"
+                            placeholder="🔍 Search destinations by name or description...">
+                    </div>
+                    <div id="count-badge" style="color: #666; font-size: 0.9rem; font-weight: 600;">
+                        Showing 0 destinations
+                    </div>
+                </div>
 
-                    <article class="card">
-
-                        <img src="https://images.unsplash.com/photo-1514222134-b57cbb8ce073?auto=format&fit=crop&w=800&q=80"
-                            alt="Mountains in Himachal Pradesh">
-
-                        <div class="card-content">
-                            <h3>Himachal Pradesh</h3>
-
-                            <p>
-                                Explore quiet mountain towns, scenic valleys,
-                                pine forests and breathtaking Himalayan views.
-                            </p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="card">
-
-                        <img src="https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=800&q=80"
-                            alt="Beach in Goa">
-
-                        <div class="card-content">
-                            <h3>Goa</h3>
-
-                            <p>
-                                Relax beside the Arabian Sea, enjoy local food
-                                and experience Goa's vibrant coastal culture.
-                            </p>
-                        </div>
-
-                    </article>
-
-
-                    <article class="card">
-
-                        <img src="https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=800&q=80"
-                            alt="Taj Mahal in Agra">
-
-                        <div class="card-content">
-                            <h3>Agra</h3>
-
-                            <p>
-                                Visit the Taj Mahal and discover the rich
-                                Mughal history and architecture of the city.
-                            </p>
-                        </div>
-
-                    </article>
-
+                <div class="cards" id="cards-container">
+                    <!-- Loaded dynamically from /api/destinations -->
                 </div>
 
             </div>
 
         </section>
-
 
         <!-- About -->
         <section class="about" id="about">
@@ -459,13 +605,265 @@
 
     </main>
 
+    <!-- Modal 1: Add New Destination (POST /api/destinations) -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Add New Destination</h3>
+                <button class="modal-close" id="close-add-modal-btn">&times;</button>
+            </div>
+            <form id="add-destination-form">
+                <div class="form-group">
+                    <label for="add-dest-name">Destination Name *</label>
+                    <input type="text" id="add-dest-name" placeholder="e.g. Kerala" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-dest-tagline">Tagline</label>
+                    <input type="text" id="add-dest-tagline" placeholder="e.g. God's Own Country">
+                </div>
+                <div class="form-group">
+                    <label for="add-dest-description">Description *</label>
+                    <textarea id="add-dest-description" rows="3" placeholder="Brief overview of the destination..."
+                        required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="add-dest-image">Image URL</label>
+                    <input type="url" id="add-dest-image" placeholder="https://images.unsplash.com/...">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Create Destination (POST)</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Edit Destination (PUT /api/destinations/:id) -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Edit Destination</h3>
+                <button class="modal-close" id="close-edit-modal-btn">&times;</button>
+            </div>
+            <form id="edit-destination-form">
+                <input type="hidden" id="edit-dest-id">
+                <div class="form-group">
+                    <label for="edit-dest-name">Destination Name *</label>
+                    <input type="text" id="edit-dest-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-dest-tagline">Tagline</label>
+                    <input type="text" id="edit-dest-tagline">
+                </div>
+                <div class="form-group">
+                    <label for="edit-dest-description">Description *</label>
+                    <textarea id="edit-dest-description" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-dest-image">Image URL</label>
+                    <input type="url" id="edit-dest-image">
+                </div>
+                <button type="submit" class="btn btn-warning" style="width: 100%;">Save Changes </button>
+            </form>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer>
-        <p>© 2026 Explore India. Made for curious travelers.</p>
+        <p>© 2026 Explore India.</p>
     </footer>
 
+    <!-- Client-side API Integration Script -->
+    <script>
+        let allDestinations = [];
+
+        const cardsContainer = document.getElementById('cards-container');
+        const countBadge = document.getElementById('count-badge');
+        const searchInput = document.getElementById('search-input');
+
+        // Modal Elements
+        const addModal = document.getElementById('add-modal');
+        const openAddModalBtn = document.getElementById('open-add-modal-btn');
+        const closeAddModalBtn = document.getElementById('close-add-modal-btn');
+        const addDestinationForm = document.getElementById('add-destination-form');
+
+        const editModal = document.getElementById('edit-modal');
+        const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
+        const editDestinationForm = document.getElementById('edit-destination-form');
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        // Modal Controls
+        openAddModalBtn.addEventListener('click', () => addModal.classList.add('active'));
+        closeAddModalBtn.addEventListener('click', () => addModal.classList.remove('active'));
+        addModal.addEventListener('click', (e) => { if (e.target === addModal) addModal.classList.remove('active'); });
+
+        closeEditModalBtn.addEventListener('click', () => editModal.classList.remove('active'));
+        editModal.addEventListener('click', (e) => { if (e.target === editModal) editModal.classList.remove('active'); });
+
+        // Search Listener
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase().trim();
+            const filtered = allDestinations.filter(d =>
+                d.name.toLowerCase().includes(query) ||
+                d.description.toLowerCase().includes(query) ||
+                (d.tagline && d.tagline.toLowerCase().includes(query))
+            );
+            renderCards(filtered);
+        });
+
+        // Fetch Destinations (GET /api/destinations)
+        async function fetchDestinations() {
+            try {
+                const response = await fetch('/api/destinations');
+                const data = await response.json();
+
+                if (data.success) {
+                    allDestinations = data.data;
+                    renderCards(allDestinations);
+                } else {
+                    cardsContainer.innerHTML = `<p style="color: red;">Error fetching destinations: ${data.error}</p>`;
+                }
+            } catch (err) {
+                cardsContainer.innerHTML = `<p style="color: red; text-align: center; grid-column: 1/-1;">Failed to connect to API server. Ensure server is running on port 3000.</p>`;
+            }
+        }
+
+        function renderCards(destinations) {
+            countBadge.innerText = `Showing ${destinations.length} destination${destinations.length === 1 ? '' : 's'}`;
+
+            if (destinations.length === 0) {
+                cardsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #777; padding: 40px 0;">No matching destinations found.</p>';
+                return;
+            }
+
+            cardsContainer.innerHTML = destinations.map(dest => `
+                <article class="card">
+                    <img src="${dest.image}" alt="${dest.name}">
+                    <div class="card-content">
+                        <div class="card-tagline">${dest.tagline || 'Destination'}</div>
+                        <h3>${dest.name}</h3>
+                        <p>${dest.description}</p>
+                        <div class="card-actions">
+                            <span class="card-id-badge">ID: ${dest.id}</span>
+                            <div class="card-btn-group">
+                                <button class="btn btn-warning" onclick="openEditModal('${dest.id}')">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteDestination('${dest.id}')">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        // Add Destination (POST /api/destinations)
+        addDestinationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const newDest = {
+                name: document.getElementById('add-dest-name').value,
+                tagline: document.getElementById('add-dest-tagline').value,
+                description: document.getElementById('add-dest-description').value,
+                image: document.getElementById('add-dest-image').value
+            };
+
+            try {
+                const res = await fetch('/api/destinations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newDest)
+                });
+
+                const result = await res.json();
+                if (res.status === 201 && result.success) {
+                    addDestinationForm.reset();
+                    addModal.classList.remove('active');
+                    showToast(`Created destination "${result.data.name}"!`);
+                    fetchDestinations();
+                } else {
+                    showToast(result.error || 'Failed to create destination', 'error');
+                }
+            } catch (err) {
+                showToast('Network error connecting to API server', 'error');
+            }
+        });
+
+        // Open Edit Modal (pre-fill data)
+        function openEditModal(id) {
+            const dest = allDestinations.find(d => d.id === id);
+            if (!dest) return;
+
+            document.getElementById('edit-dest-id').value = dest.id;
+            document.getElementById('edit-dest-name').value = dest.name;
+            document.getElementById('edit-dest-tagline').value = dest.tagline || '';
+            document.getElementById('edit-dest-description').value = dest.description;
+            document.getElementById('edit-dest-image').value = dest.image || '';
+
+            editModal.classList.add('active');
+        }
+
+        // Edit Destination (PUT /api/destinations/:id)
+        editDestinationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('edit-dest-id').value;
+            const updatedData = {
+                name: document.getElementById('edit-dest-name').value,
+                tagline: document.getElementById('edit-dest-tagline').value,
+                description: document.getElementById('edit-dest-description').value,
+                image: document.getElementById('edit-dest-image').value
+            };
+
+            try {
+                const res = await fetch(`/api/destinations/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                });
+
+                const result = await res.json();
+                if (res.status === 200 && result.success) {
+                    editModal.classList.remove('active');
+                    showToast(`Updated destination "${result.data.name}"!`);
+                    fetchDestinations();
+                } else {
+                    showToast(result.error || 'Failed to update destination', 'error');
+                }
+            } catch (err) {
+                showToast('Network error connecting to API server', 'error');
+            }
+        });
+
+        // Delete Destination (DELETE /api/destinations/:id)
+        async function deleteDestination(id) {
+            const dest = allDestinations.find(d => d.id === id);
+            if (!confirm(`Are you sure you want to delete "${dest ? dest.name : 'ID ' + id}"?`)) return;
+
+            try {
+                const res = await fetch(`/api/destinations/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await res.json();
+                if (res.status === 200 && result.success) {
+                    showToast(`Deleted destination (ID: ${id})`);
+                    fetchDestinations();
+                } else {
+                    showToast(result.error || 'Failed to delete destination', 'error');
+                }
+            } catch (err) {
+                showToast('Network error connecting to API server', 'error');
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', fetchDestinations);
+    </script>
 </body>
 
 </html>
-```
