@@ -40,13 +40,25 @@ function initDatabase() {
             ["Ladakh", "Land of High Passes", "Explore dramatic high-altitude desert landscapes, crystal-clear alpine lakes, and ancient Buddhist monasteries.", "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=800&q=80"],
             ["Amritsar, Punjab", "The Golden City", "Visit the revered Golden Temple, experience rich Sikh heritage, vibrant culture, and legendary Punjabi cuisine.", "https://images.unsplash.com/photo-1609946860435-86644f6a9117?auto=format&fit=crop&w=800&q=80"],
             ["Mysore, Karnataka", "City of Palaces", "Marvel at the illuminated Mysore Palace, aromatic sandalwood, heritage architecture, and royal traditions.", "https://images.unsplash.com/photo-1600100397608-f010e423b971?auto=format&fit=crop&w=800&q=80"],
-            ["Darjeeling, West Bengal", "Queen of the Hills", "Enjoy rolling tea estates, panoramic views of Mount Kanchenjunga, and the historic Himalayan toy train.", "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80"]
+            ["Darjeeling, West Bengal", "Queen of the Hills", "Enjoy rolling tea estates, panoramic views of Mount Kanchenjunga, and the historic Himalayan toy train.", "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80"],
+            ["Udaipur, Rajasthan", "City of Lakes", "Explore majestic palaces, shimmering lakes, and romantic heritage architecture.", "https://images.unsplash.com/photo-1615836245337-f5b9b2303f1c?auto=format&fit=crop&w=800&q=80"]
         ];
 
         for (const dest of seedData) {
             insertStmt.run(...dest);
         }
         console.log('[DB] Seeding completed successfully.');
+    }
+
+    // Ensure Udaipur exists if not present in existing DB
+    const checkUdaipur = db.prepare("SELECT COUNT(*) as count FROM destinations WHERE name LIKE ?").get("%Udaipur%");
+    if (checkUdaipur.count === 0) {
+        const insertStmt = db.prepare(`
+            INSERT INTO destinations (name, tagline, description, image)
+            VALUES (?, ?, ?, ?)
+        `);
+        insertStmt.run("Udaipur, Rajasthan", "City of Lakes", "Explore majestic palaces, shimmering lakes, and romantic heritage architecture.", "https://images.unsplash.com/photo-1615836245337-f5b9b2303f1c?auto=format&fit=crop&w=800&q=80");
+        console.log('[DB] Added Udaipur to database.');
     }
 }
 
