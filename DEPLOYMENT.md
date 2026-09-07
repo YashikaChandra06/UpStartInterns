@@ -1,29 +1,40 @@
-# Vercel Deployment Guide: Explore India Web App
+# Cloud Deployment Guide: Explore India Web App
 
-This guide explains how to deploy **Explore India** to **Vercel** to obtain a live public `https://...` URL.
+This guide explains how to deploy **Explore India** to free cloud hosting platforms to obtain a live public `https://...` URL.
 
 ---
 
-## Deploying on Vercel
+## Containerized / Free-Tier Deployment Options
 
-[Vercel](https://vercel.com) provides instant serverless deployment directly from GitHub.
-
-### Steps to Deploy:
+### Option 1: Railway.app
 
 1. **Push repository to GitHub**:
-   Ensure `vercel.json` is committed and pushed to your GitHub repository ([YashikaChandra06/UpStartInterns](https://github.com/YashikaChandra06/UpStartInterns.git)).
+   Ensure your code is pushed to your GitHub repository ([YashikaChandra06/UpStartInterns](https://github.com/YashikaChandra06/UpStartInterns.git)).
 
-2. **Import Project into Vercel**:
-   - Go to [vercel.com/new](https://vercel.com/new) and log in with GitHub.
-   - Select **Import** next to your repository: `YashikaChandra06/UpStartInterns`.
+2. **Deploy on Railway**:
+   - Go to [railway.app](https://railway.app) and log in with GitHub.
+   - Click **New Project** $\rightarrow$ **Deploy from GitHub repo**.
+   - Select `YashikaChandra06/UpStartInterns`.
+   - Railway will auto-detect `Dockerfile` / `package.json` and deploy.
+   - Add environment variable `JWT_SECRET`.
 
-3. **Configure Environment Variables**:
-   Under **Environment Variables**, add:
-   - `JWT_SECRET`: `super_secret_jwt_key_vercel_2026`
+---
 
-4. **Deploy**:
-   - Click **Deploy**. Vercel will automatically build the serverless functions and generate a public live URL like:
-     `https://upstart-interns.vercel.app`
+### Option 2: Docker Container Deployment (Fly.io / Google Cloud Run)
+
+The repository includes a production-ready `Dockerfile`:
+
+```dockerfile
+FROM node:24-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+ENV PORT=3000
+ENV NODE_ENV=production
+CMD ["npm", "start"]
+```
 
 ---
 
