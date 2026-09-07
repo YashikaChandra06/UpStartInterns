@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+
 const db = require('./db');
+const { generateToken, authenticateToken } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,13 +15,143 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // ==========================================
-// REST API ROUTES (/api/destinations)
+// AUTHENTICATION ROUTES (/api/auth)
 // ==========================================
 
-// 1. GET /api/destinations — List all destinations from SQLite DB
-app.get('/api/destinations', (req, res) => {
+// 1. POST /api/auth/register — Register new user with hashed password
+app.post('/api/auth/register', (req, res) => {
     try {
-        const destinations = db.getAllDestinations();
+        const { username, email, password } = req.body;
+
+        // Validation
+        if (!username || typeof username !== 'string' || !username.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: "Validation Error: 'username' is required."
+            });
+        }
+
+        if (!email || typeof email !== 'string' || !email.includes('@')) {
+            return res.status(400).json({
+                success: false,
+                error: "Validation Error: Valid 'email' address is required."
+            });
+        }
+
+        if (!password || typeof password !== 'string' || password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: "Validation Error: 'password' must be at least 6 characters long."
+            });
+        }
+
+        // Check if email already registered
+        const existingUser = db.getUserByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                error: "Registration Error: An account with this email already exists."
+            });
+        }
+
+        // Hash password securely with bcryptjs (10 rounds)
+        const salt = bcrypt.genSaltSync(10);
+        const passwordHash = bcrypt.hashSync(password, salt);
+
+        // Save user to SQLite database
+        const newUser = db.createUser({
+            username: username.trim(),
+            email: email.trim(),
+            passwordHash
+        });
+
+        // Issue JWT Token
+        const token = generateToken(newUser);
+
+        res.status(201).json({
+            success: true,
+            message: "User registered successfully.",
+            token,
+            user: {
+                id: newUser.id,
+                username: newUser.username,
+                email: newUser.email
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: "Server Error: Unable to complete registration."
+        });
+    }
+});
+
+// 2. POST /api/auth/login — Login with email & password hash verification
+app.post('/api/auth/login', (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: "Validation Error: Both 'email' and 'password' are required."
+            });
+        }
+
+        const user = db.getUserByEmail(email);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: "Authentication Error: Invalid email or password."
+            });
+        }
+
+        // Verify password against stored bcrypt hash
+        const isMatch = bcrypt.compareSync(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                error: "Authentication Error: Invalid email or password."
+            });
+        }
+
+        // Issue JWT Token
+        const token = generateToken(user);
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful.",
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: "Server Error: Unable to complete login."
+        });
+    }
+});
+
+// 3. GET /api/auth/me — Return current logged-in user profile
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+    res.status(200).json({
+        success: true,
+        user: req.user
+    });
+});
+
+// ==========================================
+// USER-SCOPED DESTINATION ROUTES (/api/destinations)
+// ==========================================
+
+// 1. GET /api/destinations — List destinations for authenticated user
+app.get('/api/destinations', authenticateToken, (req, res) => {
+    try {
+        const destinations = db.getAllDestinations(req.user.id);
         res.status(200).json({
             success: true,
             count: destinations.length,
@@ -27,21 +160,21 @@ app.get('/api/destinations', (req, res) => {
     } catch (err) {
         res.status(500).json({
             success: false,
-            error: "Database Query Error: Unable to fetch destinations."
+            error: "Database Error: Unable to fetch user destinations."
         });
     }
 });
 
-// 2. GET /api/destinations/:id — Get single destination by ID from SQLite DB
-app.get('/api/destinations/:id', (req, res) => {
+// 2. GET /api/destinations/:id — Get single user-owned destination
+app.get('/api/destinations/:id', authenticateToken, (req, res) => {
     try {
         const { id } = req.params;
-        const destination = db.getDestinationById(id);
+        const destination = db.getDestinationById(id, req.user.id);
 
         if (!destination) {
             return res.status(404).json({
                 success: false,
-                error: `Destination with ID '${id}' not found.`
+                error: `Destination with ID '${id}' not found in your account.`
             });
         }
 
@@ -52,17 +185,17 @@ app.get('/api/destinations/:id', (req, res) => {
     } catch (err) {
         res.status(500).json({
             success: false,
-            error: "Database Query Error: Unable to fetch destination."
+            error: "Database Error: Unable to fetch destination."
         });
     }
 });
 
-// 3. POST /api/destinations — Validate input & insert into SQLite DB
-app.post('/api/destinations', (req, res) => {
+// 3. POST /api/destinations — Create new destination scoped to user
+app.post('/api/destinations', authenticateToken, (req, res) => {
     try {
         const { name, tagline, description, image } = req.body;
 
-        // STRICT INPUT VALIDATION BEFORE DB STORAGE
+        // Input Validation
         if (!name || typeof name !== 'string' || !name.trim()) {
             return res.status(400).json({
                 success: false,
@@ -91,8 +224,7 @@ app.post('/api/destinations', (req, res) => {
             });
         }
 
-        // Create record in database
-        const newDestination = db.createDestination({
+        const newDestination = db.createDestination(req.user.id, {
             name: name.trim(),
             tagline: tagline ? tagline.trim() : "Scenic Destination",
             description: description.trim(),
@@ -101,7 +233,7 @@ app.post('/api/destinations', (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: "Destination created successfully in database.",
+            message: "Destination created successfully.",
             data: newDestination
         });
     } catch (err) {
@@ -112,16 +244,16 @@ app.post('/api/destinations', (req, res) => {
     }
 });
 
-// 4. PUT /api/destinations/:id — Validate input & update record in SQLite DB
-app.put('/api/destinations/:id', (req, res) => {
+// 4. PUT /api/destinations/:id — Update destination owned by user
+app.put('/api/destinations/:id', authenticateToken, (req, res) => {
     try {
         const { id } = req.params;
-        const existing = db.getDestinationById(id);
+        const existing = db.getDestinationById(id, req.user.id);
 
         if (!existing) {
             return res.status(404).json({
                 success: false,
-                error: `Destination with ID '${id}' not found.`
+                error: `Destination with ID '${id}' not found in your account.`
             });
         }
 
@@ -134,7 +266,6 @@ app.put('/api/destinations/:id', (req, res) => {
 
         const { name, tagline, description, image } = req.body;
 
-        // Validation if fields provided
         if (name !== undefined) {
             if (typeof name !== 'string' || !name.trim() || name.trim().length < 2) {
                 return res.status(400).json({
@@ -153,11 +284,11 @@ app.put('/api/destinations/:id', (req, res) => {
             }
         }
 
-        const updatedDestination = db.updateDestination(id, { name, tagline, description, image });
+        const updatedDestination = db.updateDestination(id, req.user.id, { name, tagline, description, image });
 
         res.status(200).json({
             success: true,
-            message: `Destination with ID '${id}' updated successfully in database.`,
+            message: `Destination updated successfully.`,
             data: updatedDestination
         });
     } catch (err) {
@@ -168,24 +299,24 @@ app.put('/api/destinations/:id', (req, res) => {
     }
 });
 
-// 5. DELETE /api/destinations/:id — Delete record from SQLite DB
-app.delete('/api/destinations/:id', (req, res) => {
+// 5. DELETE /api/destinations/:id — Delete destination owned by user
+app.delete('/api/destinations/:id', authenticateToken, (req, res) => {
     try {
         const { id } = req.params;
-        const existing = db.getDestinationById(id);
+        const existing = db.getDestinationById(id, req.user.id);
 
         if (!existing) {
             return res.status(404).json({
                 success: false,
-                error: `Destination with ID '${id}' not found.`
+                error: `Destination with ID '${id}' not found in your account.`
             });
         }
 
-        const deletedItem = db.deleteDestination(id);
+        const deletedItem = db.deleteDestination(id, req.user.id);
 
         res.status(200).json({
             success: true,
-            message: `Destination '${deletedItem.name}' (ID: ${id}) deleted successfully from database.`,
+            message: `Destination '${deletedItem.name}' deleted successfully.`,
             data: { id: deletedItem.id, name: deletedItem.name }
         });
     } catch (err) {
@@ -201,11 +332,16 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, () => {
-    console.log(`====================================================`);
-    console.log(` Explore India SQLite API Server running on port ${PORT}`);
-    console.log(` Local Application URL: http://localhost:${PORT}`);
-    console.log(` Database: SQLite (destinations.db)`);
-    console.log(`====================================================`);
-});
+// Start Server (only if executed directly, not imported in serverless functions)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`====================================================`);
+        console.log(` Explore India Authenticated Server running on port ${PORT}`);
+        console.log(` Local Application URL: http://localhost:${PORT}`);
+        console.log(` Database: SQLite (destinations.db)`);
+        console.log(` Authentication: JWT + bcryptjs Password Hashing`);
+        console.log(`====================================================`);
+    });
+}
+
+module.exports = app;

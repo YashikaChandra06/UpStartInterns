@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Explore India | Travel Guide & REST API</title>
+    <title>Explore India | Authenticated Travel Guide & REST API</title>
 
     <style>
         * {
@@ -55,10 +55,16 @@
             white-space: nowrap;
         }
 
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
         .nav-links {
             display: flex;
             list-style: none;
-            gap: 28px;
+            gap: 24px;
             align-items: center;
         }
 
@@ -71,6 +77,22 @@
 
         .nav-links a:hover {
             color: #d35400;
+        }
+
+        .user-widget {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            background: #fff3eb;
+            color: #d35400;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(211, 84, 0, 0.2);
         }
 
         /* ================= HERO ================= */
@@ -133,6 +155,14 @@
         .btn-outline:hover {
             background: #d35400;
             color: white;
+        }
+
+        .btn-secondary {
+            background: #7f8c8d;
+        }
+
+        .btn-secondary:hover {
+            background: #707b7c;
         }
 
         .btn-warning {
@@ -307,6 +337,39 @@
             font-family: monospace;
         }
 
+        /* ================= AUTH MODAL & FORM ================= */
+
+        .auth-tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: #777;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .auth-tab.active {
+            color: #d35400;
+            border-bottom-color: #d35400;
+        }
+
+        .demo-btn-box {
+            background: #fff8f3;
+            border: 1px dashed #d35400;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
         /* ================= MODALS ================= */
 
         .modal-overlay {
@@ -333,7 +396,7 @@
 
         .modal-card {
             background: white;
-            width: min(500px, 90%);
+            width: min(480px, 90%);
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -518,11 +581,18 @@
         <nav>
             <div class="logo">Explore India</div>
 
-            <ul class="nav-links">
-                <li><a href="#home">Home</a></li>
-                <li><a href="#places">Places</a></li>
-                <li><a href="#about">About</a></li>
-            </ul>
+            <div class="nav-right">
+                <ul class="nav-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#places">Places</a></li>
+                    <li><a href="#about">About</a></li>
+                </ul>
+
+                <!-- User Authentication Widget -->
+                <div class="user-widget" id="user-widget">
+                    <!-- Dynamically rendered (Login/Register or User Badge/Logout) -->
+                </div>
+            </div>
         </nav>
     </header>
 
@@ -535,12 +605,10 @@
                 <h1>Discover the <span>Beauty of India</span></h1>
 
                 <p>
-                    From the snow-covered mountains of the Himalayas
-                    to the peaceful beaches of Goa, India offers
-                    unforgettable experiences for every traveler.
+                    Create your personal travel bucket list. Sign in to save, manage, and customize your own destination guides protected securely in your account.
                 </p>
 
-                <a href="#places" class="btn">Explore Destinations</a>
+                <a href="#places" class="btn">Explore My Destinations</a>
             </div>
 
             <div class="hero-image">
@@ -557,7 +625,8 @@
 
                 <div class="section-heading-container">
                     <div class="section-heading">
-                        <h2>Popular Destinations</h2>
+                        <h2 id="dashboard-title">My Saved Destinations</h2>
+                        <p id="dashboard-subtitle">Authenticated & User-Scoped Data Storage.</p>
                     </div>
                     <button class="btn btn-outline" id="open-add-modal-btn">+ Add Destination</button>
                 </div>
@@ -605,7 +674,60 @@
 
     </main>
 
-    <!-- Modal 1: Add New Destination (POST /api/destinations) -->
+    <!-- Modal 1: User Authentication (Login & Register) -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="auth-modal-title">Sign In to Your Account</h3>
+                <button class="modal-close" id="close-auth-modal-btn">&times;</button>
+            </div>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tab-login">Sign In</div>
+                <div class="auth-tab" id="tab-register">Create Account</div>
+            </div>
+
+            <!-- Demo Login Shortcut -->
+            <div class="demo-btn-box" id="demo-box">
+                <p style="font-size: 0.85rem; color: #555; margin-bottom: 6px;">Want to test immediately?</p>
+                <button type="button" class="btn btn-outline" id="fill-demo-btn" style="padding: 6px 12px; font-size: 0.85rem;">
+                    ⚡ Auto-Fill Demo Credentials
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email Address *</label>
+                    <input type="email" id="login-email" placeholder="e.g. demo@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password *</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+            </form>
+
+            <!-- Register Form (hidden by default) -->
+            <form id="register-form" style="display: none;">
+                <div class="form-group">
+                    <label for="reg-username">Full Name / Username *</label>
+                    <input type="text" id="reg-username" placeholder="e.g. Yashika Chandra" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address *</label>
+                    <input type="email" id="reg-email" placeholder="e.g. traveler@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password * (Min 6 characters)</label>
+                    <input type="password" id="reg-password" placeholder="••••••••" minlength="6" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Add New Destination (POST /api/destinations) -->
     <div class="modal-overlay" id="add-modal">
         <div class="modal-card">
             <div class="modal-header">
@@ -623,19 +745,18 @@
                 </div>
                 <div class="form-group">
                     <label for="add-dest-description">Description *</label>
-                    <textarea id="add-dest-description" rows="3" placeholder="Brief overview of the destination..."
-                        required></textarea>
+                    <textarea id="add-dest-description" rows="3" placeholder="Brief overview of the destination..." required></textarea>
                 </div>
                 <div class="form-group">
                     <label for="add-dest-image">Image URL</label>
                     <input type="url" id="add-dest-image" placeholder="https://images.unsplash.com/...">
                 </div>
-                <button type="submit" class="btn" style="width: 100%;">Create Destination (POST)</button>
+                <button type="submit" class="btn" style="width: 100%;">Create Destination</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal 2: Edit Destination (PUT /api/destinations/:id) -->
+    <!-- Modal 3: Edit Destination (PUT /api/destinations/:id) -->
     <div class="modal-overlay" id="edit-modal">
         <div class="modal-card">
             <div class="modal-header">
@@ -660,7 +781,7 @@
                     <label for="edit-dest-image">Image URL</label>
                     <input type="url" id="edit-dest-image">
                 </div>
-                <button type="submit" class="btn btn-warning" style="width: 100%;">Save Changes </button>
+                <button type="submit" class="btn btn-warning" style="width: 100%;">Save Changes</button>
             </form>
         </div>
     </div>
@@ -670,15 +791,32 @@
         <p>© 2026 Explore India.</p>
     </footer>
 
-    <!-- Client-side API Integration Script -->
+    <!-- Client-side Auth & API Integration Script -->
     <script>
+        let currentUser = null;
+        let authToken = localStorage.getItem('token') || null;
         let allDestinations = [];
 
+        // Elements
+        const userWidget = document.getElementById('user-widget');
         const cardsContainer = document.getElementById('cards-container');
         const countBadge = document.getElementById('count-badge');
         const searchInput = document.getElementById('search-input');
+        const dashboardTitle = document.getElementById('dashboard-title');
+        const dashboardSubtitle = document.getElementById('dashboard-subtitle');
 
-        // Modal Elements
+        // Auth Modal Elements
+        const authModal = document.getElementById('auth-modal');
+        const closeAuthModalBtn = document.getElementById('close-auth-modal-btn');
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const authModalTitle = document.getElementById('auth-modal-title');
+        const fillDemoBtn = document.getElementById('fill-demo-btn');
+        const demoBox = document.getElementById('demo-box');
+
+        // Destination Modals
         const addModal = document.getElementById('add-modal');
         const openAddModalBtn = document.getElementById('open-add-modal-btn');
         const closeAddModalBtn = document.getElementById('close-add-modal-btn');
@@ -688,7 +826,7 @@
         const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
         const editDestinationForm = document.getElementById('edit-destination-form');
 
-        // Toast Notification System
+        // Toast Helper
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -698,7 +836,112 @@
             setTimeout(() => toast.remove(), 3500);
         }
 
+        // Helper for Auth Headers
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': authToken ? `Bearer ${authToken}` : ''
+            };
+        }
+
+        // Initialize User Session
+        async function initAuth() {
+            if (!authToken) {
+                renderLoggedOutState();
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    currentUser = data.user;
+                    renderLoggedInState();
+                    fetchDestinations();
+                } else {
+                    logout();
+                }
+            } catch (err) {
+                renderLoggedOutState();
+            }
+        }
+
+        function renderLoggedInState() {
+            userWidget.innerHTML = `
+                <span class="user-badge">👤 ${currentUser.username}</span>
+                <button class="btn btn-outline" onclick="logout()" style="padding: 6px 14px; font-size: 0.85rem;">Sign Out</button>
+            `;
+            dashboardTitle.innerText = `${currentUser.username}'s Travel List`;
+            dashboardSubtitle.innerText = `Data scoped strictly to account: ${currentUser.email}`;
+            openAddModalBtn.style.display = 'inline-block';
+        }
+
+        function renderLoggedOutState() {
+            currentUser = null;
+            userWidget.innerHTML = `
+                <button class="btn btn-outline" onclick="openAuthModal('login')" style="padding: 6px 14px; font-size: 0.85rem;">Sign In</button>
+                <button class="btn" onclick="openAuthModal('register')" style="padding: 6px 14px; font-size: 0.85rem;">Register</button>
+            `;
+            dashboardTitle.innerText = 'Explore Destinations';
+            dashboardSubtitle.innerText = 'Please sign in or create an account to view and manage your personal travel guides.';
+            openAddModalBtn.style.display = 'none';
+
+            cardsContainer.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #fdfdfd; border-radius: 16px; border: 2px dashed #e0e0e0;">
+                    <h3 style="margin-bottom: 10px; color: #333;">🔒 Authentication Required</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Sign in to access your personal travel destinations protected with hashed password security.</p>
+                    <button class="btn" onclick="openAuthModal('login')">Sign In to Account</button>
+                    <button class="btn btn-outline" onclick="openAuthModal('register')" style="margin-left: 10px;">Create Account</button>
+                </div>
+            `;
+            countBadge.innerText = 'Showing 0 destinations';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            authToken = null;
+            currentUser = null;
+            showToast('Signed out successfully.');
+            renderLoggedOutState();
+        }
+
         // Modal Controls
+        function openAuthModal(tab = 'login') {
+            switchAuthTab(tab);
+            authModal.classList.add('active');
+        }
+
+        closeAuthModalBtn.addEventListener('click', () => authModal.classList.remove('active'));
+        authModal.addEventListener('click', (e) => { if (e.target === authModal) authModal.classList.remove('active'); });
+
+        function switchAuthTab(tab) {
+            if (tab === 'login') {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                authModalTitle.innerText = 'Sign In to Your Account';
+                demoBox.style.display = 'block';
+            } else {
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                authModalTitle.innerText = 'Create a New Account';
+                demoBox.style.display = 'none';
+            }
+        }
+
+        tabLogin.addEventListener('click', () => switchAuthTab('login'));
+        tabRegister.addEventListener('click', () => switchAuthTab('register'));
+
+        fillDemoBtn.addEventListener('click', () => {
+            document.getElementById('login-email').value = 'demo@example.com';
+            document.getElementById('login-password').value = 'password123';
+        });
+
+        // Add & Edit Modal Handlers
         openAddModalBtn.addEventListener('click', () => addModal.classList.add('active'));
         closeAddModalBtn.addEventListener('click', () => addModal.classList.remove('active'));
         addModal.addEventListener('click', (e) => { if (e.target === addModal) addModal.classList.remove('active'); });
@@ -706,7 +949,67 @@
         closeEditModalBtn.addEventListener('click', () => editModal.classList.remove('active'));
         editModal.addEventListener('click', (e) => { if (e.target === editModal) editModal.classList.remove('active'); });
 
-        // Search Listener
+        // Auth Submissions
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    authToken = data.token;
+                    localStorage.setItem('token', authToken);
+                    currentUser = data.user;
+                    authModal.classList.remove('active');
+                    showToast(`Welcome back, ${currentUser.username}!`);
+                    renderLoggedInState();
+                    fetchDestinations();
+                } else {
+                    showToast(data.error || 'Login failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error logging in', 'error');
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await res.json();
+                if (res.status === 201 && data.success) {
+                    authToken = data.token;
+                    localStorage.setItem('token', authToken);
+                    currentUser = data.user;
+                    authModal.classList.remove('active');
+                    showToast(`Account created! Welcome, ${currentUser.username}.`);
+                    renderLoggedInState();
+                    fetchDestinations();
+                } else {
+                    showToast(data.error || 'Registration failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error registering user', 'error');
+            }
+        });
+
+        // Search Filter
         searchInput.addEventListener('input', () => {
             const query = searchInput.value.toLowerCase().trim();
             const filtered = allDestinations.filter(d =>
@@ -717,20 +1020,22 @@
             renderCards(filtered);
         });
 
-        // Fetch Destinations (GET /api/destinations)
+        // Fetch Destinations for Authenticated User (GET /api/destinations)
         async function fetchDestinations() {
+            if (!authToken) return;
+
             try {
-                const response = await fetch('/api/destinations');
+                const response = await fetch('/api/destinations', { headers: getAuthHeaders() });
                 const data = await response.json();
 
-                if (data.success) {
+                if (response.ok && data.success) {
                     allDestinations = data.data;
                     renderCards(allDestinations);
                 } else {
-                    cardsContainer.innerHTML = `<p style="color: red;">Error fetching destinations: ${data.error}</p>`;
+                    if (response.status === 401 || response.status === 403) logout();
                 }
             } catch (err) {
-                cardsContainer.innerHTML = `<p style="color: red; text-align: center; grid-column: 1/-1;">Failed to connect to API server. Ensure server is running on port 3000.</p>`;
+                cardsContainer.innerHTML = `<p style="color: red; text-align: center; grid-column: 1/-1;">Failed to connect to API server.</p>`;
             }
         }
 
@@ -738,7 +1043,7 @@
             countBadge.innerText = `Showing ${destinations.length} destination${destinations.length === 1 ? '' : 's'}`;
 
             if (destinations.length === 0) {
-                cardsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #777; padding: 40px 0;">No matching destinations found.</p>';
+                cardsContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #777; padding: 40px 0;">No destinations in your account yet. Click "+ Add Destination" above to create one!</p>';
                 return;
             }
 
@@ -775,7 +1080,7 @@
             try {
                 const res = await fetch('/api/destinations', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(newDest)
                 });
 
@@ -793,7 +1098,7 @@
             }
         });
 
-        // Open Edit Modal (pre-fill data)
+        // Open Edit Modal
         function openEditModal(id) {
             const dest = allDestinations.find(d => d.id === id);
             if (!dest) return;
@@ -822,7 +1127,7 @@
             try {
                 const res = await fetch(`/api/destinations/${id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(updatedData)
                 });
 
@@ -846,12 +1151,13 @@
 
             try {
                 const res = await fetch(`/api/destinations/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
                 });
 
                 const result = await res.json();
                 if (res.status === 200 && result.success) {
-                    showToast(`Deleted destination (ID: ${id})`);
+                    showToast(`Deleted destination.`);
                     fetchDestinations();
                 } else {
                     showToast(result.error || 'Failed to delete destination', 'error');
@@ -861,8 +1167,8 @@
             }
         }
 
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', fetchDestinations);
+        // Initialize on Load
+        document.addEventListener('DOMContentLoaded', initAuth);
     </script>
 </body>
 

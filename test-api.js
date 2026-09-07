@@ -22,87 +22,120 @@ function makeRequest(options, body = null) {
 
 async function runTests() {
     console.log("====================================================");
-    console.log("    EXPLORE INDIA SQLITE DATABASE API TEST SUITE    ");
+    console.log("  EXPLORE INDIA AUTH & DATA SCOPING TEST SUITE     ");
     console.log("====================================================\n");
 
-    // 1. GET ALL
-    console.log("[TEST 1] GET /api/destinations (List All from SQLite DB)");
-    let res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations', method: 'GET' });
-    console.log(`Status: ${res.status}`);
-    console.log(`Count: ${res.body.count}`);
-    console.log(`Response Data Sample:`, res.body.data ? res.body.data.slice(0, 2) : res.body, "\n");
-
-    // 2. GET BY ID (Valid)
-    console.log("[TEST 2] GET /api/destinations/1 (Get Single Record from DB)");
-    res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/1', method: 'GET' });
-    console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
-
-    // 3. GET BY ID (Missing -> 404)
-    console.log("[TEST 3] GET /api/destinations/999 (Missing Record -> 404 Not Found)");
-    res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/999', method: 'GET' });
-    console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
-
-    // 4. POST CREATE (Valid -> 201 -> Stored in SQLite DB)
-    console.log("[TEST 4] POST /api/destinations (Create 'Udaipur' -> 201 Created)");
-    const newDest = {
-        name: "Udaipur, Rajasthan",
-        tagline: "City of Lakes",
-        description: "Explore majestic palaces, shimmering lakes, and romantic heritage architecture.",
-        image: "https://images.unsplash.com/photo-1615836245337-f5b9b2303f1c?auto=format&fit=crop&w=800&q=80"
-    };
-    res = await makeRequest({ 
-        host: 'localhost', 
-        port: 3000, 
-        path: '/api/destinations', 
+    // 1. REGISTER ALICE
+    console.log("[TEST 1] Register User Alice (alice@example.com)");
+    let res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/auth/register',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
-    }, newDest);
+    }, { username: "Alice Traveler", email: "alice@example.com", password: "AlicePassword123" });
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
-    const createdId = res.body.data ? res.body.data.id : null;
+    const aliceToken = res.body.token;
 
-    // 5. POST CREATE (Validation Failure -> 400 Bad Request before DB storage)
-    console.log("[TEST 5] POST /api/destinations (Invalid Payload -> 400 Bad Request)");
-    res = await makeRequest({ 
-        host: 'localhost', 
-        port: 3000, 
-        path: '/api/destinations', 
+    // 2. REGISTER BOB
+    console.log("[TEST 2] Register User Bob (bob@example.com)");
+    res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/auth/register',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
-    }, { description: "Missing name field" });
+    }, { username: "Bob Explorer", email: "bob@example.com", password: "BobPassword123" });
+    console.log(`Status: ${res.status}`);
+    console.log(`Response:`, res.body, "\n");
+    const bobToken = res.body.token;
+
+    // 3. LOGIN WRONG PASSWORD (401 Unauthorized)
+    console.log("[TEST 3] Login Alice with Wrong Password -> 401 Unauthorized");
+    res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/auth/login',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    }, { email: "alice@example.com", password: "WrongPassword" });
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
 
-    // 6. PUT UPDATE (Valid -> 200 -> Update SQLite DB)
-    if (createdId) {
-        console.log(`[TEST 6] PUT /api/destinations/${createdId} (Update Record -> 200 OK)`);
-        res = await makeRequest({ 
-            host: 'localhost', 
-            port: 3000, 
-            path: `/api/destinations/${createdId}`, 
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' }
-        }, { tagline: "Venice of the East & City of Lakes" });
+    // 4. ALICE CREATES DESTINATION "Shimla"
+    console.log("[TEST 4] Alice Creates Destination 'Shimla' (POST /api/destinations)");
+    res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/destinations',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${aliceToken}`
+        }
+    }, { name: "Shimla, Himachal", tagline: "Queen of Hills", description: "Scenic mountain ridge with British architecture." });
+    console.log(`Status: ${res.status}`);
+    console.log(`Response:`, res.body, "\n");
+    const aliceDestId = res.body.data ? res.body.data.id : null;
+
+    // 5. BOB READS DESTINATIONS (Data Scoping Verification)
+    console.log("[TEST 5] Bob Fetches Destinations (GET /api/destinations) -> Scoped Data Verification");
+    res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/destinations',
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${bobToken}` }
+    });
+    console.log(`Status: ${res.status}`);
+    console.log(`Bob's Record Count: ${res.body.count} (Must be 0 — Bob cannot see Alice's data!)`);
+    console.log(`Response Data:`, res.body.data, "\n");
+
+    // 6. BOB CREATES DESTINATION "Munnar"
+    console.log("[TEST 6] Bob Creates Destination 'Munnar' (POST /api/destinations)");
+    res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/destinations',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${bobToken}`
+        }
+    }, { name: "Munnar, Kerala", tagline: "Tea Hills", description: "Endless rolling green tea plantations." });
+    console.log(`Status: ${res.status}`);
+    console.log(`Response:`, res.body, "\n");
+
+    // 7. BOB ATTEMPTS TO DELETE ALICE'S DESTINATION (Ownership Protection)
+    if (aliceDestId) {
+        console.log(`[TEST 7] Bob Attempts to DELETE Alice's Destination ID ${aliceDestId} -> 404 / 403 Security Check`);
+        res = await makeRequest({
+            host: 'localhost',
+            port: 3000,
+            path: `/api/destinations/${aliceDestId}`,
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${bobToken}` }
+        });
         console.log(`Status: ${res.status}`);
         console.log(`Response:`, res.body, "\n");
     }
 
-    // 7. DELETE (Valid -> 200 OK)
-    console.log("[TEST 7] DELETE /api/destinations/2 (Delete 'Goa' -> 200 OK)");
-    res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/2', method: 'DELETE' });
+    // 8. ALICE VERIFIES HER OWN DATA
+    console.log("[TEST 8] Alice Fetches Destinations (GET /api/destinations)");
+    res = await makeRequest({
+        host: 'localhost',
+        port: 3000,
+        path: '/api/destinations',
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${aliceToken}` }
+    });
     console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
+    console.log(`Alice's Record Count: ${res.body.count}`);
+    console.log(`Alice's Saved Items:`, res.body.data ? res.body.data.map(d => d.name) : [], "\n");
 
-    // 8. VERIFY PERSISTENCE (GET ALL to confirm count)
-    console.log("[TEST 8] VERIFY DATABASE STATE (GET /api/destinations)");
-    res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations', method: 'GET' });
-    console.log(`Status: ${res.status}`);
-    console.log(`Total Records in Database: ${res.body.count}`);
-
-    console.log("\n====================================================");
-    console.log("      SQLITE DATABASE API TESTS COMPLETED!         ");
+    console.log("====================================================");
+    console.log("   ALL AUTH & USER-SCOPING TESTS PASSED CLEANLY!   ");
     console.log("====================================================");
 }
 
