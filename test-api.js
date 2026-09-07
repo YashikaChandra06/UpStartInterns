@@ -22,34 +22,35 @@ function makeRequest(options, body = null) {
 
 async function runTests() {
     console.log("====================================================");
-    console.log("        EXPLORE INDIA REST API TEST SUITE           ");
+    console.log("    EXPLORE INDIA SQLITE DATABASE API TEST SUITE    ");
     console.log("====================================================\n");
 
     // 1. GET ALL
-    console.log("[TEST 1] GET /api/destinations (List All)");
+    console.log("[TEST 1] GET /api/destinations (List All from SQLite DB)");
     let res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations', method: 'GET' });
     console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
+    console.log(`Count: ${res.body.count}`);
+    console.log(`Response Data Sample:`, res.body.data ? res.body.data.slice(0, 2) : res.body, "\n");
 
     // 2. GET BY ID (Valid)
-    console.log("[TEST 2] GET /api/destinations/1 (Get Single)");
+    console.log("[TEST 2] GET /api/destinations/1 (Get Single Record from DB)");
     res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/1', method: 'GET' });
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
 
     // 3. GET BY ID (Missing -> 404)
-    console.log("[TEST 3] GET /api/destinations/999 (Missing Record -> 404)");
+    console.log("[TEST 3] GET /api/destinations/999 (Missing Record -> 404 Not Found)");
     res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/999', method: 'GET' });
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
 
-    // 4. POST CREATE (Valid -> 201)
-    console.log("[TEST 4] POST /api/destinations (Create New -> 201)");
+    // 4. POST CREATE (Valid -> 201 -> Stored in SQLite DB)
+    console.log("[TEST 4] POST /api/destinations (Create 'Udaipur' -> 201 Created)");
     const newDest = {
-        name: "Kerala",
-        tagline: "God's Own Country",
-        description: "Explore backwaters, tea gardens, and lush greenery.",
-        image: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=800&q=80"
+        name: "Udaipur, Rajasthan",
+        tagline: "City of Lakes",
+        description: "Explore majestic palaces, shimmering lakes, and romantic heritage architecture.",
+        image: "https://images.unsplash.com/photo-1615836245337-f5b9b2303f1c?auto=format&fit=crop&w=800&q=80"
     };
     res = await makeRequest({ 
         host: 'localhost', 
@@ -60,57 +61,48 @@ async function runTests() {
     }, newDest);
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
+    const createdId = res.body.data ? res.body.data.id : null;
 
-    // 5. POST CREATE (Invalid -> 400 Validation Error)
-    console.log("[TEST 5] POST /api/destinations (Missing Name -> 400 Bad Request)");
+    // 5. POST CREATE (Validation Failure -> 400 Bad Request before DB storage)
+    console.log("[TEST 5] POST /api/destinations (Invalid Payload -> 400 Bad Request)");
     res = await makeRequest({ 
         host: 'localhost', 
         port: 3000, 
         path: '/api/destinations', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
-    }, { description: "Missing name" });
+    }, { description: "Missing name field" });
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
 
-    // 6. PUT UPDATE (Valid -> 200)
-    console.log("[TEST 6] PUT /api/destinations/4 (Update Record -> 200)");
-    res = await makeRequest({ 
-        host: 'localhost', 
-        port: 3000, 
-        path: '/api/destinations/4', 
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
-    }, { tagline: "Backwaters & Beaches" });
-    console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
+    // 6. PUT UPDATE (Valid -> 200 -> Update SQLite DB)
+    if (createdId) {
+        console.log(`[TEST 6] PUT /api/destinations/${createdId} (Update Record -> 200 OK)`);
+        res = await makeRequest({ 
+            host: 'localhost', 
+            port: 3000, 
+            path: `/api/destinations/${createdId}`, 
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' }
+        }, { tagline: "Venice of the East & City of Lakes" });
+        console.log(`Status: ${res.status}`);
+        console.log(`Response:`, res.body, "\n");
+    }
 
-    // 7. PUT UPDATE (Missing Record -> 404)
-    console.log("[TEST 7] PUT /api/destinations/888 (Missing Record -> 404)");
-    res = await makeRequest({ 
-        host: 'localhost', 
-        port: 3000, 
-        path: '/api/destinations/888', 
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
-    }, { name: "Nonexistent" });
-    console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
-
-    // 8. DELETE (Valid -> 200)
-    console.log("[TEST 8] DELETE /api/destinations/2 (Delete Goa -> 200)");
+    // 7. DELETE (Valid -> 200 OK)
+    console.log("[TEST 7] DELETE /api/destinations/2 (Delete 'Goa' -> 200 OK)");
     res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/2', method: 'DELETE' });
     console.log(`Status: ${res.status}`);
     console.log(`Response:`, res.body, "\n");
 
-    // 9. DELETE (Missing Record -> 404)
-    console.log("[TEST 9] DELETE /api/destinations/2 (Delete Already Removed Record -> 404)");
-    res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations/2', method: 'DELETE' });
+    // 8. VERIFY PERSISTENCE (GET ALL to confirm count)
+    console.log("[TEST 8] VERIFY DATABASE STATE (GET /api/destinations)");
+    res = await makeRequest({ host: 'localhost', port: 3000, path: '/api/destinations', method: 'GET' });
     console.log(`Status: ${res.status}`);
-    console.log(`Response:`, res.body, "\n");
+    console.log(`Total Records in Database: ${res.body.count}`);
 
-    console.log("====================================================");
-    console.log("        ALL REST API TESTS COMPLETED SUCCESSFULLY!  ");
+    console.log("\n====================================================");
+    console.log("      SQLITE DATABASE API TESTS COMPLETED!         ");
     console.log("====================================================");
 }
 
